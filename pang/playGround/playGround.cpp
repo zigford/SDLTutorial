@@ -1,9 +1,11 @@
+#include "string"
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_image.h"
-#include "string"
 
-SDL_Renderer* gRenderer = NULL;
+int const SCREEN_HEIGHT = 480;
+int const SCREEN_WIDTH = 640;
 SDL_Window* gWindow = NULL;
+SDL_Renderer* gRenderer = NULL;
 
 class LTexture{
     public:
@@ -18,6 +20,9 @@ class LTexture{
 
         //Deallocates texture
         void free();
+
+		//Set color modulation
+		void setColor( Uint8 red, Uint8 green, Uint8 blue );
 
         //Renders texture at given point
         void render(int x, int y, SDL_Rect* clip = NULL);
@@ -35,6 +40,10 @@ class LTexture{
         int mHeight;
 };
 
+void LTexture::setColor(Uint8 red, Uint8 green, Uint8 blue){
+	SDL_SetTextureColorMod(mTexture, red, green, blue);
+}
+
 LTexture::LTexture(){
     mTexture = NULL;
     mWidth = 0;
@@ -51,14 +60,14 @@ bool LTexture::loadFromFile(std::string path){
     SDL_Surface* loadedSurface = IMG_Load(path.c_str());
     if (loadedSurface == NULL){
         printf("Unable to load image %s! SDL Error: %s\n", 
-				path.c_str(),SDL_GetError());
+            path.c_str(),SDL_GetError());
     } else {
         SDL_SetColorKey(loadedSurface, SDL_TRUE,
-				SDL_MapRGB(loadedSurface->format,0,0xFF,0xFF));
+            SDL_MapRGB(loadedSurface->format,0,0xFF,0xFF));
         newTexture = SDL_CreateTextureFromSurface(gRenderer,loadedSurface);
         if (newTexture == NULL){
             printf("Unable to create new texture from surface: %s\n",
-					SDL_GetError());
+                SDL_GetError());
         } else {
             mWidth = loadedSurface->w;
             mHeight = loadedSurface->h;
@@ -96,122 +105,132 @@ int LTexture::getHeight(){
     return mHeight;
 }
 
-SDL_Rect gSpriteClips[4];
-LTexture gSpriteSheetTexture;
 
-bool init();
+bool init(char* title = "default");
 void close();
 bool loadMedia();
-int const SCREEN_WIDTH = 640;
-int const SCREEN_HEIGHT = 480;
+LTexture gModulatedTexture;
 
-bool loadMedia(){
-	bool success = true;
-	if (!gSpriteSheetTexture.loadFromFile("dots.png")){
-		printf("Failed to load sprite sheet texture!\n");
-		success = false;
-	} else {
-		// Split the spritelocations by 100 pixels
-		gSpriteClips[0].x = 0;
-		gSpriteClips[0].y = 0;
-		gSpriteClips[0].w = 100;
-		gSpriteClips[0].h = 100;
-
-		gSpriteClips[1].x = 100;
-		gSpriteClips[1].y = 0;
-		gSpriteClips[1].w = 100;
-		gSpriteClips[1].h = 100;
-
-		gSpriteClips[2].x = 0;
-		gSpriteClips[2].y = 100;
-		gSpriteClips[2].w = 100;
-		gSpriteClips[2].h = 100;
-
-		gSpriteClips[3].x = 100;
-		gSpriteClips[3].y = 100;
-		gSpriteClips[3].w = 100;
-		gSpriteClips[3].h = 100;
-	}
-	return success;
-
-}
-
-bool init(){
+bool init(char* title){
     bool success = true;
     if (SDL_Init(SDL_INIT_VIDEO)< 0){
         printf("SDL could not initialize video! SDL Error: %s\n",
-				SDL_GetError());
+            SDL_GetError());
         success = false;
     } else {
         int imgFlags = IMG_INIT_PNG;
-		int initted = IMG_Init(imgFlags);
+        int initted = IMG_Init(imgFlags);
         if (!(initted & imgFlags)) {
             printf("Unable to initialize image library. Error: %s\n",
-					SDL_GetError());
+        		SDL_GetError());
             success = false;
         } else {
-            gWindow = SDL_CreateWindow("clipTest",SDL_WINDOWPOS_UNDEFINED,
+            gWindow = SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,
                 SDL_WINDOWPOS_UNDEFINED,SCREEN_WIDTH,SCREEN_HEIGHT,
                 SDL_WINDOW_SHOWN);
             if (gWindow == NULL){
                 printf("Unable to create window. Error: %s\n",
-						SDL_GetError());
+                    SDL_GetError());
                 success = false;
-			} else {
-				gRenderer = SDL_CreateRenderer(gWindow, -1,
-					   SDL_RENDERER_ACCELERATED);
-				if (gRenderer == NULL) {
-					printf("Unable to create renderer: %s\n",
-							SDL_GetError());
-					success = false;
-				}
-			}
+            } else {
+                gRenderer = SDL_CreateRenderer(gWindow, -1,
+                    SDL_RENDERER_ACCELERATED);
+                if (gRenderer == NULL) {
+                    printf("Unable to create renderer: %s\n",
+                        SDL_GetError());
+                    success = false;
+                }
+            }
         }
 
     }
     return success;
 }
 
-void close(){
-	SDL_DestroyWindow(gWindow);
-	SDL_DestroyRenderer(gRenderer);
-	gSpriteSheetTexture.free();
+bool loadMedia(){
+    bool success = true;
+	gModulatedTexture.loadFromFile("background.png");
+    return success;
+}
 
-	SDL_QUIT;
-	//IMG_QUIT;
+void close() {
+    //Destroy window
+    SDL_DestroyRenderer(gRenderer);
+    SDL_DestroyWindow(gWindow);
+	gModulatedTexture.free();
+    gWindow = NULL;
+    gRenderer = NULL;
+
+    //Quit SDL subsystems
+    IMG_Quit();
+    SDL_Quit();
+}
+
+void changeColors(SDL_Event keyDown,Uint8 *r, Uint8 *g, Uint8 *b);
+
+void changeColors(SDL_Event keyDown,Uint8 *r, Uint8 *g, Uint8 *b){
+    switch (keyDown.key.keysym.sym) {
+        case SDLK_q:
+        *r += 32;
+		printf("r now equals: %d\n",r);
+        break;
+
+        case SDLK_w:
+        *g += 32;
+        break;
+
+        case SDLK_e:
+        *b += 32;
+        break;
+
+        case SDLK_a:
+        *r -= 32;
+        break;
+
+        case SDLK_s:
+        *g -= 32;
+        break;
+
+        case SDLK_d:
+        *b -= 32;
+        break;
+    }
 }
 
 int main(int args, char* argc[]){
     if(!init()){
         printf("Unable to initialize!\n");
-	} else {
-		bool quit = false;
-		loadMedia();
-		SDL_Event(e);
-		while (!quit){
-			while(SDL_PollEvent(&e) != 0){
-				if(e.type==SDL_QUIT){
-					quit = true;
-				}
-			}	
+    } else {
+    	bool quit = false;
+        loadMedia();
 
-			SDL_SetRenderDrawColor(gRenderer,0xFF,0xFF,0xFF,0xFF);
-			SDL_RenderClear(gRenderer);
+		Uint8 r = 255;
+		Uint8 g = 255;
+		Uint8 b = 255;
 			
-			gSpriteSheetTexture.render(0,0, &gSpriteClips[0]);
-			gSpriteSheetTexture.render(SCREEN_WIDTH - gSpriteClips[1].w,0,
-					&gSpriteClips[1]);
-			gSpriteSheetTexture.render(0, 
-					SCREEN_HEIGHT - gSpriteClips[2].h, &gSpriteClips[2] );
-			gSpriteSheetTexture.render(SCREEN_WIDTH - gSpriteClips[3].w,
-					SCREEN_HEIGHT - gSpriteClips[3].h,
-					&gSpriteClips[3]);
+        SDL_Event(e);
+        while (!quit){
+        	while(SDL_PollEvent(&e) != 0){
+            	if(e.type==SDL_QUIT){
+                	quit = true;
+				}else if (e.type == SDL_KEYDOWN){
+					changeColors(e,&r,&g,&b);
+					printf("Current R: %d\n", r);
+				}
+            }       
 
+    	    SDL_SetRenderDrawColor(gRenderer,0xFF,0xFF,0xFF,0xFF);
+        	SDL_RenderClear(gRenderer);
+			// Code here
+			gModulatedTexture.setColor(r,g,b);
+			gModulatedTexture.render(0,0);	
+			// end code here
+        	SDL_RenderPresent(gRenderer);
 
-			SDL_RenderPresent(gRenderer);
-
-		}
+    	}
 	}
-	close();
+
+    close();
     return 0;
 }
+
