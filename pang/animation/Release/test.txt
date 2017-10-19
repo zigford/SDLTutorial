@@ -1,0 +1,5 @@
+Initializing
+Unable to initialize image library. Error: Failed loading libpng16-16.dll: The specified module could not be found.
+
+Unable to initialize!
+boo

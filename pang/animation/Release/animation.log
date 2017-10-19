@@ -1,0 +1,5 @@
+﻿  animation.cpp
+LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/OPT:ICF' specification
+     Creating library C:\Jesse\dev\SDLTutorial\pang\animation\Release\animation.lib and object C:\Jesse\dev\SDLTutorial\pang\animation\Release\animation.exp
+  animation.vcxproj -> C:\Jesse\dev\SDLTutorial\pang\animation\Release\animation.exe
+  animation.vcxproj -> C:\Jesse\dev\SDLTutorial\pang\animation\Release\animation.pdb (Full PDB)

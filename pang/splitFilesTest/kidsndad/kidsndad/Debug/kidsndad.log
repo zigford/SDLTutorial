@@ -1,0 +1,3 @@
+﻿  main.cpp
+     Creating library C:\Jesse\dev\SDLTutorial\pang\splitFilesTest\kidsndad\Debug\kidsndad.lib and object C:\Jesse\dev\SDLTutorial\pang\splitFilesTest\kidsndad\Debug\kidsndad.exp
+LINK : fatal error LNK1561: entry point must be defined

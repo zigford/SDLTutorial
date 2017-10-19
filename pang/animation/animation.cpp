@@ -1,9 +1,14 @@
 #include "string"
+#include "stdio.h"
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_image.h"
 
-int const SCREEN_HEIGHT = 480;
-int const SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 768;
+const int SCREEN_WIDTH = 1024;
+const int WALKING_ANIMATION_FRAMES = 8;
+
+const int xCharWidth = 260;
+SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 
@@ -96,10 +101,11 @@ bool LTexture::loadFromFile(std::string path){
 
 void LTexture::free(){
     if(mTexture != NULL){
+
+		mWidth = NULL;
+		mHeight = NULL;
         SDL_DestroyTexture(mTexture);
         mTexture = NULL;
-        mWidth = NULL;
-        mHeight = NULL;
     }
 }
 
@@ -121,12 +127,10 @@ int LTexture::getHeight(){
     return mHeight;
 }
 
-
 bool init(char* title = "default");
 void close();
 bool loadMedia();
-LTexture gModulatedTexture;
-LTexture gBackgroundTexture;
+LTexture gSpriteSheetTexture;
 
 bool init(char* title){
     bool success = true;
@@ -151,7 +155,7 @@ bool init(char* title){
                 success = false;
             } else {
                 gRenderer = SDL_CreateRenderer(gWindow, -1,
-                    SDL_RENDERER_ACCELERATED);
+                    SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
                 if (gRenderer == NULL) {
                     printf("Unable to create renderer: %s\n",
                         SDL_GetError());
@@ -159,119 +163,76 @@ bool init(char* title){
                 }
             }
         }
-
     }
     return success;
 }
 
 bool loadMedia(){
     bool success = true;
-	if (!gModulatedTexture.loadFromFile("kid-transparent.png")){
-		printf("failed to load front texture\n");
+	if (!gSpriteSheetTexture.loadFromFile("spritesheet.png")) {
+		printf("Failed to load spriteclip sheet\n");
 		success = false;
-	}else {
-		gModulatedTexture.setBlendMode(SDL_BLENDMODE_BLEND);
-	}
+	} else {
+		// Set sprite clips
 
-	//Load background textures
-	if (!gBackgroundTexture.loadFromFile("background.png")){
-		printf("Failed to load background texture!\n");
-		success = false;
+		int hCharHeight = gSpriteSheetTexture.getHeight();
+		for (int x = 0; x <= WALKING_ANIMATION_FRAMES; x++) {
+			gSpriteClips[x].x = x * xCharWidth;
+			gSpriteClips[x].y = 0;
+			gSpriteClips[x].w = xCharWidth;
+			gSpriteClips[x].h = hCharHeight;
+		}
 	}
     return success;
 }
 
 void close() {
     //Destroy window
+	gSpriteSheetTexture.free();	
     SDL_DestroyRenderer(gRenderer);
     SDL_DestroyWindow(gWindow);
-	gModulatedTexture.free();
-	gBackgroundTexture.free();
-    gWindow = NULL;
+	gWindow = NULL;
     gRenderer = NULL;
-
     //Quit SDL subsystems
     IMG_Quit();
     SDL_Quit();
 }
 
-void changeColors(SDL_Event keyDown,Uint8 *r, Uint8 *g, Uint8 *b);
-
-void changeColors(SDL_Event keyDown,Uint8 *r, Uint8 *g, Uint8 *b){
-    switch (keyDown.key.keysym.sym) {
-        case SDLK_q:
-        *r += 32;
-		printf("r now equals: %d\n",r);
-        break;
-
-        case SDLK_w:
-        *g += 32;
-        break;
-
-        case SDLK_e:
-        *b += 32;
-        break;
-
-        case SDLK_a:
-        *r -= 32;
-        break;
-
-        case SDLK_s:
-        *g -= 32;
-        break;
-
-        case SDLK_d:
-        *b -= 32;
-        break;
-    }
-}
-
 int main(int args, char* argc[]){
+	printf("Initializing\n");
     if(!init()){
         printf("Unable to initialize!\n");
     } else {
     	bool quit = false;
         loadMedia();
 
-		Uint8 a = 255;
-
+		int frame = 0;
         SDL_Event(e);
         while (!quit){
-        	while(SDL_PollEvent(&e) != 0){
-            	if(e.type==SDL_QUIT){
-                	quit = true;
-				} else if (e.type == SDL_KEYDOWN){
-					if (e.key.keysym.sym == SDLK_w){
-						//Cap over 255
-						if (a + 32 > 255){
-							a = 255;
-						} else {
-							a += 32;
-						} 
-					} else if (e.key.keysym.sym == SDLK_s) {
-						if (a - 32 < 0) {
-							a = 0;
-						} else {
-							a -= 32;
-						}
-					}
+			while (SDL_PollEvent(&e) != 0) {
+				if (e.type == SDL_QUIT) {
+					quit = true;
 				}
 			}
-
-    	    SDL_SetRenderDrawColor(gRenderer,0xFF,0xFF,0xFF,0xFF);
-        	SDL_RenderClear(gRenderer);
-			// Code here
-			gBackgroundTexture.render(0,0);
-
-			gModulatedTexture.setAlpha(a);
-			gModulatedTexture.render(0,0);	
-			// end code here
-        	SDL_RenderPresent(gRenderer);
-
+			SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+			SDL_RenderClear(gRenderer);
+			SDL_Rect* currentClip = &gSpriteClips[frame /4];
+			gSpriteSheetTexture.render((
+				SCREEN_WIDTH - currentClip->w) / 2,
+				(SCREEN_HEIGHT - currentClip->h) / 2
+				, currentClip);
+			//Update screen SDL_RenderPresent( gRenderer );
+			SDL_RenderPresent(gRenderer);
+			++frame;
+			//printf("Current frame is: %d", frame);
+			if (frame / 4 >= WALKING_ANIMATION_FRAMES) {
+				frame = 0;
+			}
     	}
 	}
 
     close();
+	printf("boo\n");
     return 0;
 }
 
